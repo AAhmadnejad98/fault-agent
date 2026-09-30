@@ -1,0 +1,8 @@
+time,device,substation,current_a,voltage_kv,alarm,operator_note
+2026-03-14 08:10,F12,North,1450,19.8,OC_TRIP,Tree branch touched the line; cleared by the field crew
+2026-03-14 09:25,T3,South,210,20.1,temp high,Transformer cooling fan failed; fan replaced
+2026-03-14 11:40,F07,North,1320,19.5,oc-trip,Cable joint failure on section 3
+2026-03-14 13:05,F12,North,175,17.2,UNDER_VOLT,Upstream voltage dip; recovered without action
+2026-03-14 15:50,B2,East,0,0,BREAKER_FAIL,Breaker trip coil burned; coil replaced
+2026-03-14 17:30,F07,North,1400,19.6,Overcurrent Trip,Same cable joint failed again; joint remade properly
+2026-03-14 17:30,F07,North,1400,19.6,Overcurrent Trip,Same cable joint failed again; joint remade properly

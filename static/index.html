@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fault Agent</title>
+<style>
+  :root {
+    --navy: #0b2633;
+    --jade: #00a766;
+    --jade-soft: #e6f6ef;
+    --red: #d1495b;
+    --red-soft: #fbecee;
+    --amber: #e8a33d;
+    --text: #1d2b33;
+    --muted: #6b7c86;
+    --line: #e3e8eb;
+    --bg: #f5f7f8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--navy); color: #fff; padding: 18px 24px; border-bottom: 3px solid var(--jade); }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: .75; }
+  main { max-width: 860px; margin: 28px auto; padding: 0 16px; }
+  form { display: flex; gap: 8px; }
+  input { flex: 1; padding: 12px 14px; font-size: 15px; border: 1px solid var(--line); border-radius: 8px; outline: none; }
+  input:focus { border-color: var(--jade); }
+  button { padding: 12px 18px; font-size: 15px; border: 0; border-radius: 8px; background: var(--jade); color: #fff; cursor: pointer; font-weight: 600; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .examples { margin: 12px 0 24px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .examples span { font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #fff; border: 1px solid var(--line); cursor: pointer; }
+  .examples span:hover { border-color: var(--jade); color: var(--jade); }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+  .status { display: inline-block; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: .03em; }
+  .ok { background: var(--jade-soft); color: var(--jade); }
+  .esc { background: var(--red-soft); color: var(--red); }
+  .answer { font-size: 16px; line-height: 1.5; margin: 14px 0; }
+  .label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 18px 0 6px; }
+  .reasons { color: var(--red); font-size: 14px; margin: 8px 0 0; padding-left: 18px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.num { font-variant-numeric: tabular-nums; }
+  .chips span { display: inline-block; font-size: 12px; font-family: ui-monospace, monospace; padding: 3px 8px; margin: 0 4px 4px 0; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); }
+  .meta { font-size: 13px; color: var(--muted); margin-top: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .link { background: none; color: var(--navy); border: 1px solid var(--line); padding: 6px 10px; font-size: 13px; font-weight: 500; }
+  pre { background: var(--navy); color: #d7e3e8; padding: 14px; border-radius: 8px; font-size: 12px; overflow-x: auto; max-height: 420px; }
+  .error { color: var(--red); }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Fault Agent</h1>
+  <p>RAG + tool use + validated answers &middot; every answer checked against the data</p>
+</header>
+<main>
+  <form id="form">
+    <input id="q" placeholder="Ask about a device or substation, e.g. Why does F07 keep tripping?" autocomplete="off">
+    <button id="btn">Ask</button>
+  </form>
+  <div class="examples" id="examples">
+    <span>Why does F07 keep tripping?</span>
+    <span>What happened to T3?</span>
+    <span>What was the current on F12 at 08:10?</span>
+    <span>Were there any problems in substation East?</span>
+    <span>Why did F99 trip?</span>
+  </div>
+  <div id="out"></div>
+</main>
+<script>
+const form = document.getElementById("form");
+const input = document.getElementById("q");
+const btn = document.getElementById("btn");
+const out = document.getElementById("out");
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function chips(items) {
+  const box = el("div", "chips");
+  (items.length ? items : ["-"]).forEach(i => box.append(el("span", "", i)));
+  return box;
+}
+
+function render(r) {
+  const card = el("div", "card");
+  const a = r.answer;
+  card.append(el("span", "status " + (r.escalated ? "esc" : "ok"), r.escalated ? "ESCALATED TO SPECIALIST" : "OK · ALL CHECKS PASSED"));
+  if (r.escalated) {
+    const ul = el("ul", "reasons");
+    r.reasons.forEach(x => ul.append(el("li", "", x)));
+    card.append(ul);
+  }
+  card.append(el("div", "answer", a ? a.answer : "No valid answer."));
+
+  if (a && a.cause) {
+    card.append(el("div", "label", "Cause"), el("div", "", a.cause));
+  }
+  if (a && a.events.length) {
+    card.append(el("div", "label", "Events (verified against the database)"));
+    const t = el("table");
+    const head = el("tr");
+    ["Time", "Device", "Alarm", "Current"].forEach(h => head.append(el("th", "", h)));
+    t.append(head);
+    a.events.forEach(e => {
+      const tr = el("tr");
+      tr.append(el("td", "", e.time), el("td", "", e.device), el("td", "", e.alarm), el("td", "num", e.current_a + " A"));
+      t.append(tr);
+    });
+    card.append(t);
+  }
+  card.append(el("div", "label", "Sources"), chips(a ? a.sources : []));
+  card.append(el("div", "label", "Tools called"), chips(r.tools));
+
+  const meta = el("div", "meta");
+  meta.append(el("span", "", `Confidence: ${a ? a.confidence : "-"} · notes retrieved: ${r.notes.join(", ") || "none"} · trace ${r.trace_id}`));
+  const tb = el("button", "link", "Show trace");
+  const pre = el("pre", "hidden");
+  tb.onclick = async () => {
+    if (pre.classList.contains("hidden") && !pre.textContent) {
+      const res = await fetch("/trace/" + r.trace_id);
+      pre.textContent = JSON.stringify(await res.json(), null, 2);
+    }
+    pre.classList.toggle("hidden");
+    tb.textContent = pre.classList.contains("hidden") ? "Show trace" : "Hide trace";
+  };
+  meta.append(tb);
+  card.append(meta, pre);
+  out.replaceChildren(card);
+}
+
+async function send(question) {
+  btn.disabled = true;
+  btn.textContent = "Thinking…";
+  out.replaceChildren(el("div", "card", "Searching notes, calling tools, checking the answer…"));
+  try {
+    const res = await fetch("/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question })
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+    render(await res.json());
+  } catch (err) {
+    out.replaceChildren(el("div", "card error", "Error: " + err.message));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Ask";
+  }
+}
+
+form.addEventListener("submit", e => {
+  e.preventDefault();
+  if (input.value.trim()) send(input.value.trim());
+});
+
+document.getElementById("examples").addEventListener("click", e => {
+  if (e.target.tagName === "SPAN") {
+    input.value = e.target.textContent;
+    send(input.value);
+  }
+});
+</script>
+</body>
+</html>

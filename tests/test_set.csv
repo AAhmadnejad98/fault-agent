@@ -1,0 +1,8 @@
+question,expected_notes,expected_tool,expected_text,should_escalate
+Why does F07 keep tripping?,3;6,get_alarms,cable joint,no
+What happened to T3?,2,get_alarms,fan,no
+What was the current on F12 at 08:10?,,get_current,1450,no
+What caused the undervoltage on F12?,4,get_alarms,upstream,no
+Were there any problems in substation East?,5,get_by_substation,coil,yes
+Why did F99 trip?,,,,yes
+What is the weather in Copenhagen tomorrow?,,,,yes
