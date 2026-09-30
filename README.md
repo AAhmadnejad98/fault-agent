@@ -1,6 +1,6 @@
 # fault-agent
 
-   **Live demo:** https://fault-agent-xxxx.onrender.com (free tier, first load may take ~50 s)
+   **Live demo:** https://fault-agent.onrender.com/ (free tier, first load may take ~50 s)
    
 A small, runnable reference implementation of an LLM agent that answers operator questions about grid faults, and checks its own answers before anyone sees them.
 
