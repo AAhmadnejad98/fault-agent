@@ -145,8 +145,15 @@ async function send(question) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question })
     });
-    if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
-    render(await res.json());
+    const body = await res.text();
+    let data;
+    try {
+      data = JSON.parse(body);
+    } catch {
+      throw new Error(`server returned ${res.status}: ${body.slice(0, 120)}`);
+    }
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    render(data);
   } catch (err) {
     out.replaceChildren(el("div", "card error", "Error: " + err.message));
   } finally {

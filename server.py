@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import anthropic
@@ -12,6 +13,7 @@ from faultagent.models import Result
 from faultagent.trace import load
 
 app = FastAPI(title="fault-agent")
+log = logging.getLogger("uvicorn.error")
 client = anthropic.Anthropic()
 collection = get_collection(config.CHROMA_PATH)
 PAGE = Path(__file__).parent / "static" / "index.html"
@@ -34,6 +36,12 @@ def ask_question(q: Question):
     conn = connect(config.DB_PATH)
     try:
         return ask(text, conn, collection, client)
+    except anthropic.APIError as err:
+        log.exception("anthropic error")
+        raise HTTPException(502, f"LLM API error: {err.message}")
+    except Exception as err:
+        log.exception("ask failed")
+        raise HTTPException(500, f"{type(err).__name__}: {err}")
     finally:
         conn.close()
 
