@@ -1,5 +1,7 @@
 # fault-agent
 
+   **Live demo:** https://fault-agent-xxxx.onrender.com (free tier, first load may take ~50 s)
+   
 A small, runnable reference implementation of an LLM agent that answers operator questions about grid faults, and checks its own answers before anyone sees them.
 
 It mirrors the design of a production system I built for grid operators: RAG over operator notes, tool use for exact numbers, structured output, code-level validation, escalation to a human, full tracing, and an evaluation set. The data here is a small synthetic sample, not production data.
